@@ -48,6 +48,46 @@ func GetTopUpInfo(c *gin.Context) {
 		}
 	}
 
+	// 如果启用了支付宝，添加到支付方法列表
+	enableAlipay := setting.AlipayEnabled && setting.AlipayAppId != "" && setting.AlipayPrivateKey != "" && setting.AlipayPublicKey != ""
+	if enableAlipay {
+		hasAlipay := false
+		for _, method := range payMethods {
+			if method["type"] == "alipay" {
+				hasAlipay = true
+				break
+			}
+		}
+		if !hasAlipay {
+			payMethods = append(payMethods, map[string]string{
+				"name":      "支付宝",
+				"type":      "alipay",
+				"color":     "rgba(var(--semi-blue-5), 1)",
+				"min_topup": strconv.Itoa(setting.AlipayMinTopUp),
+			})
+		}
+	}
+
+	// 如果启用了微信支付，添加到支付方法列表
+	enableWechatPay := setting.WechatPayEnabled && setting.WechatPayMchId != "" && setting.WechatPayApiV3Key != "" && setting.WechatPaySerialNo != "" && setting.WechatPayPrivateKey != ""
+	if enableWechatPay {
+		hasWechatPay := false
+		for _, method := range payMethods {
+			if method["type"] == "wechatpay" {
+				hasWechatPay = true
+				break
+			}
+		}
+		if !hasWechatPay {
+			payMethods = append(payMethods, map[string]string{
+				"name":      "微信支付",
+				"type":      "wechatpay",
+				"color":     "rgba(var(--semi-green-5), 1)",
+				"min_topup": strconv.Itoa(setting.WechatPayMinTopUp),
+			})
+		}
+	}
+
 	// 如果启用了 Waffo 支付，添加到支付方法列表
 	enableWaffo := setting.WaffoEnabled &&
 		((!setting.WaffoSandbox &&
@@ -79,10 +119,14 @@ func GetTopUpInfo(c *gin.Context) {
 	}
 
 	data := gin.H{
-		"enable_online_topup": operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "",
-		"enable_stripe_topup": setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "",
-		"enable_creem_topup":  setting.CreemApiKey != "" && setting.CreemProducts != "[]",
-		"enable_waffo_topup": enableWaffo,
+		"enable_online_topup":    operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "",
+		"enable_stripe_topup":    setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "",
+		"enable_creem_topup":     setting.CreemApiKey != "" && setting.CreemProducts != "[]",
+		"enable_waffo_topup":     enableWaffo,
+		"enable_alipay_topup":    enableAlipay,
+		"enable_wechatpay_topup": enableWechatPay,
+		"alipay_min_topup":       setting.AlipayMinTopUp,
+		"wechatpay_min_topup":    setting.WechatPayMinTopUp,
 		"waffo_pay_methods": func() interface{} {
 			if enableWaffo {
 				return setting.GetWaffoPayMethods()

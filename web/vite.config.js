@@ -22,7 +22,20 @@ import { defineConfig, transformWithEsbuild } from 'vite';
 import pkg from '@douyinfe/vite-plugin-semi';
 import path from 'path';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
+import { fileURLToPath } from 'url';
 const { vitePluginSemi } = pkg;
+
+// 自定义 sass importer，处理 ~ 前缀（webpack 约定）
+const tildeSassImporter = {
+  findFileUrl(url) {
+    if (!url.startsWith('~')) return null;
+    const modulePath = url.slice(1);
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    return new URL(
+      'file://' + path.resolve(__dirname, 'node_modules', modulePath)
+    );
+  },
+};
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -52,9 +65,16 @@ export default defineConfig({
     },
     react(),
     vitePluginSemi({
-      cssLayer: true,
+      cssLayer: false,
     }),
   ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        importers: [tildeSassImporter],
+      },
+    },
+  },
   optimizeDeps: {
     force: true,
     esbuildOptions: {

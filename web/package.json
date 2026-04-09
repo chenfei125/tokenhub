@@ -10,6 +10,7 @@
     "@visactor/react-vchart": "~1.8.8",
     "@visactor/vchart": "~1.8.8",
     "@visactor/vchart-semi-theme": "~1.8.8",
+    "antd": "^6.3.5",
     "axios": "1.13.5",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.11",
@@ -37,6 +38,7 @@
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
+    "sass": "^1.89.1",
     "sse.js": "^2.6.0",
     "unist-util-visit": "^5.0.0",
     "use-debounce": "^10.0.4"
