@@ -27,6 +27,7 @@ import SettingsPaymentGatewayWaffo from '../../pages/Setting/Payment/SettingsPay
 import SettingsPaymentGatewayAlipay from '../../pages/Setting/Payment/SettingsPaymentGatewayAlipay';
 import SettingsPaymentGatewayWechatPay from '../../pages/Setting/Payment/SettingsPaymentGatewayWechatPay';
 import { API, showError, toBoolean } from '../../helpers';
+import { setStatusData } from '../../helpers/data';
 import { useTranslation } from 'react-i18next';
 
 const PaymentSetting = () => {
@@ -44,12 +45,14 @@ const PaymentSetting = () => {
     AmountOptions: '',
     AmountDiscount: '',
 
+    StripeEnabled: false,
     StripeApiSecret: '',
     StripeWebhookSecret: '',
     StripePriceId: '',
     StripeUnitPrice: 8.0,
     StripeMinTopUp: 1,
     StripePromotionCodesEnabled: false,
+    CreemEnabled: false,
   });
 
   let [loading, setLoading] = useState(false);
@@ -120,6 +123,13 @@ const PaymentSetting = () => {
     try {
       setLoading(true);
       await getOptions();
+      // 同步刷新 /api/status，更新 localStorage 中的汇率等缓存
+      try {
+        const statusRes = await API.get('/api/status');
+        if (statusRes?.data?.success) {
+          setStatusData(statusRes.data.data);
+        }
+      } catch (_) {}
     } catch (error) {
       showError(t('刷新失败'));
     } finally {

@@ -40,6 +40,7 @@ export default function SettingsPaymentGatewayCreem(props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
+    CreemEnabled: false,
     CreemApiKey: '',
     CreemWebhookSecret: '',
     CreemProducts: '[]',
@@ -61,6 +62,7 @@ export default function SettingsPaymentGatewayCreem(props) {
   useEffect(() => {
     if (props.options && formApiRef.current) {
       const currentInputs = {
+        CreemEnabled: props.options.CreemEnabled || false,
         CreemApiKey: props.options.CreemApiKey || '',
         CreemWebhookSecret: props.options.CreemWebhookSecret || '',
         CreemProducts: props.options.CreemProducts || '[]',
@@ -89,6 +91,7 @@ export default function SettingsPaymentGatewayCreem(props) {
     try {
       const options = [];
 
+      options.push({ key: 'CreemEnabled', value: inputs.CreemEnabled ? 'true' : 'false' });
       if (inputs.CreemApiKey && inputs.CreemApiKey !== '') {
         options.push({ key: 'CreemApiKey', value: inputs.CreemApiKey });
       }
@@ -260,6 +263,16 @@ export default function SettingsPaymentGatewayCreem(props) {
         getFormApi={(api) => (formApiRef.current = api)}
       >
         <Form.Section text={t('Creem 设置')}>
+          <Row gutter={{ xs: 8, sm: 16, md: 24 }} style={{ marginBottom: 16 }}>
+            <Col span={24}>
+              <Form.Switch
+                field='CreemEnabled'
+                label={t('启用 Creem 支付')}
+                checkedText='｜'
+                uncheckedText='〇'
+              />
+            </Col>
+          </Row>
           <Text>
             {t('Creem 介绍')}
             <a href='https://creem.io' target='_blank' rel='noreferrer'>

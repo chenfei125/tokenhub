@@ -40,6 +40,7 @@ export default function SettingsPaymentGateway(props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
+    StripeEnabled: false,
     StripeApiSecret: '',
     StripeWebhookSecret: '',
     StripePriceId: '',
@@ -53,6 +54,7 @@ export default function SettingsPaymentGateway(props) {
   useEffect(() => {
     if (props.options && formApiRef.current) {
       const currentInputs = {
+        StripeEnabled: props.options.StripeEnabled || false,
         StripeApiSecret: props.options.StripeApiSecret || '',
         StripeWebhookSecret: props.options.StripeWebhookSecret || '',
         StripePriceId: props.options.StripePriceId || '',
@@ -89,6 +91,7 @@ export default function SettingsPaymentGateway(props) {
     try {
       const options = [];
 
+      options.push({ key: 'StripeEnabled', value: inputs.StripeEnabled ? 'true' : 'false' });
       if (inputs.StripeApiSecret && inputs.StripeApiSecret !== '') {
         options.push({ key: 'StripeApiSecret', value: inputs.StripeApiSecret });
       }
@@ -166,6 +169,16 @@ export default function SettingsPaymentGateway(props) {
         getFormApi={(api) => (formApiRef.current = api)}
       >
         <Form.Section text={t('Stripe 设置')}>
+          <Row gutter={{ xs: 8, sm: 16, md: 24 }} style={{ marginBottom: 16 }}>
+            <Col span={24}>
+              <Form.Switch
+                field='StripeEnabled'
+                label={t('启用 Stripe 支付')}
+                checkedText='｜'
+                uncheckedText='〇'
+              />
+            </Col>
+          </Row>
           <Text>
             Stripe 密钥、Webhook 等设置请
             <a

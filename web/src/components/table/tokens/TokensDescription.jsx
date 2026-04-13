@@ -17,26 +17,72 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
-import { Typography } from '@douyinfe/semi-ui';
+import React, { useState, useEffect } from 'react';
+import { Typography, Toast, Tooltip } from '@douyinfe/semi-ui';
+import { IconCopy } from '@douyinfe/semi-icons';
 import { Key } from 'lucide-react';
 import CompactModeToggle from '../../common/ui/CompactModeToggle';
 
 const { Text } = Typography;
 
 const TokensDescription = ({ compactMode, setCompactMode, t }) => {
+  const [serverAddress, setServerAddress] = useState('');
+
+  useEffect(() => {
+    let addr = '';
+    try {
+      const status = JSON.parse(localStorage.getItem('status') || '{}');
+      addr = status.server_address || '';
+    } catch (_) {}
+    if (!addr) addr = window.location.origin;
+    setServerAddress(addr);
+  }, []);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(serverAddress).then(() => {
+      Toast.success(t('已复制'));
+    }).catch(() => {
+      Toast.error(t('复制失败'));
+    });
+  };
+
   return (
-    <div className='flex flex-col md:flex-row justify-between items-start md:items-center gap-2 w-full'>
-      <div className='flex items-center text-blue-500'>
-        <Key size={16} className='mr-2' />
-        <Text>{t('令牌管理')}</Text>
+    <div className='flex flex-col gap-2 w-full'>
+      {/* 第一行：令牌管理标题 + 紧凑模式切换 */}
+      <div className='flex flex-col md:flex-row justify-between items-start md:items-center gap-2 w-full'>
+        <div className='flex items-center text-blue-500'>
+          <Key size={16} className='mr-2' />
+          <Text>{t('令牌管理')}</Text>
+        </div>
+        <CompactModeToggle
+          compactMode={compactMode}
+          setCompactMode={setCompactMode}
+          t={t}
+        />
       </div>
 
-      <CompactModeToggle
-        compactMode={compactMode}
-        setCompactMode={setCompactMode}
-        t={t}
-      />
+      {/* 第二行：API 接口地址 + 复制按钮 */}
+      <div className='flex items-center gap-2 flex-wrap'>
+        <Text type='tertiary' size='small'>{t('API 接口 默认')}</Text>
+        <Text type='tertiary' size='small'>｜</Text>
+        <Text
+          size='small'
+          style={{ fontFamily: 'monospace', userSelect: 'all' }}
+        >
+          {serverAddress}
+        </Text>
+        <Tooltip content={t('复制接口地址')}>
+          <span
+            onClick={handleCopy}
+            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+          >
+            <IconCopy
+              size='small'
+              style={{ color: 'var(--semi-color-text-2)', fontSize: 14 }}
+            />
+          </span>
+        </Tooltip>
+      </div>
     </div>
   );
 };

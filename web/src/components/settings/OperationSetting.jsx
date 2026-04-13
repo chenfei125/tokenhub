@@ -28,6 +28,7 @@ import SettingsMonitoring from '../../pages/Setting/Operation/SettingsMonitoring
 import SettingsCreditLimit from '../../pages/Setting/Operation/SettingsCreditLimit';
 import SettingsCheckin from '../../pages/Setting/Operation/SettingsCheckin';
 import { API, showError, toBoolean } from '../../helpers';
+import { setStatusData } from '../../helpers/data';
 
 const OperationSetting = () => {
   let [inputs, setInputs] = useState({
@@ -107,7 +108,13 @@ const OperationSetting = () => {
     try {
       setLoading(true);
       await getOptions();
-      // showSuccess('刷新成功');
+      // 同步刷新 /api/status，更新 localStorage 中的汇率等缓存
+      try {
+        const statusRes = await API.get('/api/status');
+        if (statusRes?.data?.success) {
+          setStatusData(statusRes.data.data);
+        }
+      } catch (_) {}
     } catch (error) {
       showError('刷新失败');
     } finally {

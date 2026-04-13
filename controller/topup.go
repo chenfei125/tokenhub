@@ -23,72 +23,12 @@ import (
 )
 
 func GetTopUpInfo(c *gin.Context) {
-	// 获取支付方式
-	payMethods := operation_setting.PayMethods
-
-	// 如果启用了 Stripe 支付，添加到支付方法列表
-	if setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "" {
-		// 检查是否已经包含 Stripe
-		hasStripe := false
-		for _, method := range payMethods {
-			if method["type"] == "stripe" {
-				hasStripe = true
-				break
-			}
-		}
-
-		if !hasStripe {
-			stripeMethod := map[string]string{
-				"name":      "Stripe",
-				"type":      "stripe",
-				"color":     "rgba(var(--semi-purple-5), 1)",
-				"min_topup": strconv.Itoa(setting.StripeMinTopUp),
-			}
-			payMethods = append(payMethods, stripeMethod)
-		}
-	}
-
-	// 如果启用了支付宝，添加到支付方法列表
+	// 计算各支付方式是否真正可用
+	enableOnlineTopUp := operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != ""
+	enableStripe := setting.StripeEnabled && setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != ""
 	enableAlipay := setting.AlipayEnabled && setting.AlipayAppId != "" && setting.AlipayPrivateKey != "" && setting.AlipayPublicKey != ""
-	if enableAlipay {
-		hasAlipay := false
-		for _, method := range payMethods {
-			if method["type"] == "alipay" {
-				hasAlipay = true
-				break
-			}
-		}
-		if !hasAlipay {
-			payMethods = append(payMethods, map[string]string{
-				"name":      "支付宝",
-				"type":      "alipay",
-				"color":     "rgba(var(--semi-blue-5), 1)",
-				"min_topup": strconv.Itoa(setting.AlipayMinTopUp),
-			})
-		}
-	}
-
-	// 如果启用了微信支付，添加到支付方法列表
 	enableWechatPay := setting.WechatPayEnabled && setting.WechatPayMchId != "" && setting.WechatPayApiV3Key != "" && setting.WechatPaySerialNo != "" && setting.WechatPayPrivateKey != ""
-	if enableWechatPay {
-		hasWechatPay := false
-		for _, method := range payMethods {
-			if method["type"] == "wechatpay" {
-				hasWechatPay = true
-				break
-			}
-		}
-		if !hasWechatPay {
-			payMethods = append(payMethods, map[string]string{
-				"name":      "微信支付",
-				"type":      "wechatpay",
-				"color":     "rgba(var(--semi-green-5), 1)",
-				"min_topup": strconv.Itoa(setting.WechatPayMinTopUp),
-			})
-		}
-	}
-
-	// 如果启用了 Waffo 支付，添加到支付方法列表
+	enableCreem := setting.CreemEnabled && setting.CreemApiKey != "" && setting.CreemProducts != "[]"
 	enableWaffo := setting.WaffoEnabled &&
 		((!setting.WaffoSandbox &&
 			setting.WaffoApiKey != "" &&
@@ -98,35 +38,79 @@ func GetTopUpInfo(c *gin.Context) {
 				setting.WaffoSandboxApiKey != "" &&
 				setting.WaffoSandboxPrivateKey != "" &&
 				setting.WaffoSandboxPublicCert != ""))
-	if enableWaffo {
-		hasWaffo := false
-		for _, method := range payMethods {
-			if method["type"] == "waffo" {
-				hasWaffo = true
-				break
-			}
-		}
 
-		if !hasWaffo {
-			waffoMethod := map[string]string{
-				"name":      "Waffo (Global Payment)",
-				"type":      "waffo",
-				"color":     "rgba(var(--semi-blue-5), 1)",
-				"min_topup": strconv.Itoa(setting.WaffoMinTopUp),
+	// 以已启用的方式为准，重新构建 payMethods 列表（不依赖默认值中可能存在的未启用项）
+	var payMethods []map[string]string
+
+	// 易支付自定义方式（custom1、custom2 等）仅在易支付配置完整时保留
+	for _, method := range operation_setting.PayMethods {
+		t := method["type"]
+		switch t {
+		case "alipay", "wxpay", "wechatpay", "stripe", "waffo", "creem":
+			// 这些有独立开关，下面单独处理，跳过
+		default:
+			// 自定义类型（custom1 等）依赖易支付
+			if enableOnlineTopUp {
+				payMethods = append(payMethods, method)
 			}
-			payMethods = append(payMethods, waffoMethod)
 		}
 	}
 
+	// 按各自开关决定是否加入
+	if enableStripe {
+		payMethods = append(payMethods, map[string]string{
+			"name":      "Stripe",
+			"type":      "stripe",
+			"color":     "rgba(var(--semi-purple-5), 1)",
+			"min_topup": strconv.Itoa(setting.StripeMinTopUp),
+		})
+	}
+	if enableAlipay {
+		payMethods = append(payMethods, map[string]string{
+			"name":      "支付宝",
+			"type":      "alipay",
+			"color":     "rgba(var(--semi-blue-5), 1)",
+			"min_topup": strconv.Itoa(setting.AlipayMinTopUp),
+		})
+	}
+	if enableWechatPay {
+		payMethods = append(payMethods, map[string]string{
+			"name":      "微信",
+			"type":      "wxpay",
+			"color":     "rgba(var(--semi-green-5), 1)",
+			"min_topup": strconv.Itoa(setting.WechatPayMinTopUp),
+		})
+	}
+	if enableCreem {
+		payMethods = append(payMethods, map[string]string{
+			"name":  "Creem",
+			"type":  "creem",
+			"color": "rgba(var(--semi-orange-5), 1)",
+		})
+	}
+	if enableWaffo {
+		payMethods = append(payMethods, map[string]string{
+			"name":      "Waffo",
+			"type":      "waffo",
+			"color":     "rgba(var(--semi-blue-5), 1)",
+			"min_topup": strconv.Itoa(setting.WaffoMinTopUp),
+		})
+	}
+	if payMethods == nil {
+		payMethods = []map[string]string{}
+	}
+
 	data := gin.H{
-		"enable_online_topup":    operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "",
-		"enable_stripe_topup":    setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "",
-		"enable_creem_topup":     setting.CreemApiKey != "" && setting.CreemProducts != "[]",
+		"enable_online_topup":    enableOnlineTopUp,
+		"enable_stripe_topup":    enableStripe,
+		"enable_creem_topup":     enableCreem,
 		"enable_waffo_topup":     enableWaffo,
 		"enable_alipay_topup":    enableAlipay,
 		"enable_wechatpay_topup": enableWechatPay,
 		"alipay_min_topup":       setting.AlipayMinTopUp,
+		"alipay_unit_price":      setting.AlipayUnitPrice,
 		"wechatpay_min_topup":    setting.WechatPayMinTopUp,
+		"wechatpay_unit_price":   setting.WechatPayUnitPrice,
 		"waffo_pay_methods": func() interface{} {
 			if enableWaffo {
 				return setting.GetWaffoPayMethods()

@@ -29,7 +29,8 @@ import {
   copy,
   getQuotaPerUnit,
 } from '../../helpers';
-import { Modal, Toast } from '@douyinfe/semi-ui';
+import { Modal, Toast, Typography } from '@douyinfe/semi-ui';
+import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
 import { StatusContext } from '../../context/Status';
@@ -59,6 +60,8 @@ const TopUp = () => {
     statusState?.status?.enable_online_topup || false,
   );
   const [priceRatio, setPriceRatio] = useState(statusState?.status?.price || 1);
+  // 当前实际使用的支付方式单价（用于预设充值额度的实付金额计算）
+  const [effectiveUnitPrice, setEffectiveUnitPrice] = useState(statusState?.status?.price || 1);
 
   const [enableStripeTopUp, setEnableStripeTopUp] = useState(
     statusState?.status?.enable_stripe_topup || false,
@@ -70,6 +73,17 @@ const TopUp = () => {
   const [enableCreemTopUp, setEnableCreemTopUp] = useState(false);
   const [creemOpen, setCreemOpen] = useState(false);
   const [selectedCreemProduct, setSelectedCreemProduct] = useState(null);
+
+  // Alipay 相关状态
+  const [enableAlipayTopUp, setEnableAlipayTopUp] = useState(false);
+  const [alipayMinTopUp, setAlipayMinTopUp] = useState(1);
+
+  // WechatPay 相关状态
+  const [enableWechatPayTopUp, setEnableWechatPayTopUp] = useState(false);
+  const [wechatPayMinTopUp, setWechatPayMinTopUp] = useState(1);
+  const [wechatQrVisible, setWechatQrVisible] = useState(false);
+  const [wechatQrUrl, setWechatQrUrl] = useState('');
+  const [wechatTradeNo, setWechatTradeNo] = useState('');
 
   // Waffo 相关状态
   const [enableWaffoTopUp, setEnableWaffoTopUp] = useState(false);
@@ -162,6 +176,16 @@ const TopUp = () => {
         showError(t('管理员未开启Stripe充值！'));
         return;
       }
+    } else if (payment === 'alipay') {
+      if (!enableAlipayTopUp) {
+        showError(t('管理员未开启支付宝充值！'));
+        return;
+      }
+    } else if (payment === 'wxpay') {
+      if (!enableWechatPayTopUp) {
+        showError(t('管理员未开启微信支付充值！'));
+        return;
+      }
     } else {
       if (!enableOnlineTopUp) {
         showError(t('管理员未开启在线充值！'));
@@ -175,7 +199,7 @@ const TopUp = () => {
       if (payment === 'stripe') {
         await getStripeAmount();
       } else {
-        await getAmount();
+        await getAmount(undefined, payment);
       }
 
       if (topUpCount < minTopUp) {
@@ -199,7 +223,7 @@ const TopUp = () => {
     } else {
       // 普通支付处理
       if (amount === 0) {
-        await getAmount();
+        await getAmount(undefined, payWay);
       }
     }
 
@@ -211,13 +235,19 @@ const TopUp = () => {
     try {
       let res;
       if (payWay === 'stripe') {
-        // Stripe 支付请求
         res = await API.post('/api/user/stripe/pay', {
           amount: parseInt(topUpCount),
           payment_method: 'stripe',
         });
+      } else if (payWay === 'alipay') {
+        res = await API.post('/api/user/alipay/pay', {
+          amount: parseInt(topUpCount),
+        });
+      } else if (payWay === 'wxpay') {
+        res = await API.post('/api/user/wechatpay/pay', {
+          amount: parseInt(topUpCount),
+        });
       } else {
-        // 普通支付请求
         res = await API.post('/api/user/pay', {
           amount: parseInt(topUpCount),
           payment_method: payWay,
@@ -228,10 +258,22 @@ const TopUp = () => {
         const { message, data } = res.data;
         if (message === 'success') {
           if (payWay === 'stripe') {
-            // Stripe 支付回调处理
             window.open(data.pay_link, '_blank');
+          } else if (payWay === 'alipay') {
+            // 支付宝：跳转到支付页面
+            window.open(data.pay_url, '_blank');
+          } else if (payWay === 'wxpay') {
+            if (data.pay_type === 'h5') {
+              // 手机端：直接跳转
+              window.location.href = data.pay_url;
+            } else {
+              // PC端：显示二维码
+              setWechatQrUrl(data.code_url);
+              setWechatTradeNo(data.trade_no);
+              setWechatQrVisible(true);
+            }
           } else {
-            // 普通支付表单提交
+            // 易支付：表单提交
             let params = data;
             let url = res.data.url;
             let form = document.createElement('form');
@@ -481,17 +523,34 @@ const TopUp = () => {
           const enableStripeTopUp = data.enable_stripe_topup || false;
           const enableOnlineTopUp = data.enable_online_topup || false;
           const enableCreemTopUp = data.enable_creem_topup || false;
+          const enableAlipay = data.enable_alipay_topup || false;
+          const enableWechatPay = data.enable_wechatpay_topup || false;
+          const enableWaffoTopUp = data.enable_waffo_topup || false;
           const minTopUpValue = enableOnlineTopUp
             ? data.min_topup
             : enableStripeTopUp
               ? data.stripe_min_topup
-              : data.enable_waffo_topup
+              : enableWaffoTopUp
                 ? data.waffo_min_topup
-                : 1;
+                : enableAlipay
+                  ? data.alipay_min_topup || 1
+                  : enableWechatPay
+                    ? data.wechatpay_min_topup || 1
+                    : 1;
           setEnableOnlineTopUp(enableOnlineTopUp);
           setEnableStripeTopUp(enableStripeTopUp);
           setEnableCreemTopUp(enableCreemTopUp);
-          const enableWaffoTopUp = data.enable_waffo_topup || false;
+          setEnableAlipayTopUp(enableAlipay);
+          setAlipayMinTopUp(data.alipay_min_topup || 1);
+          setEnableWechatPayTopUp(enableWechatPay);
+          setWechatPayMinTopUp(data.wechatpay_min_topup || 1);
+          // 设置实际有效单价：按支付方式优先级取
+          const unitPrice = enableAlipay
+            ? (data.alipay_unit_price || 1)
+            : enableWechatPay
+              ? (data.wechatpay_unit_price || 1)
+              : (data.price || priceRatio);
+          setEffectiveUnitPrice(unitPrice);
           setEnableWaffoTopUp(enableWaffoTopUp);
           setWaffoPayMethods(data.waffo_pay_methods || []);
           setWaffoMinTopUp(data.waffo_min_topup || 1);
@@ -511,8 +570,9 @@ const TopUp = () => {
             setPresetAmounts(generatePresetAmounts(minTopUpValue));
           }
 
-          // 初始化显示实付金额
-          getAmount(minTopUpValue);
+          // 初始化显示实付金额（直接传入支付方式，避免闭包读到旧状态）
+          const initMethod = enableAlipay ? 'alipay' : enableWechatPay ? 'wxpay' : enableStripeTopUp ? 'stripe' : null;
+          getAmount(minTopUpValue, initMethod);
         } catch (e) {
           setPayMethods([]);
         }
@@ -611,18 +671,40 @@ const TopUp = () => {
   }, [statusState?.status]);
 
   const renderAmount = () => {
+    const method = payWay || (enableStripeTopUp && !enableAlipayTopUp && !enableWechatPayTopUp ? 'stripe' : '');
+    if (method === 'stripe') {
+      return '$ ' + amount;
+    }
     return amount + ' ' + t('元');
   };
 
-  const getAmount = async (value) => {
+  // 根据支付方式选择正确的金额查询接口
+  const getAmount = async (value, method) => {
     if (value === undefined) {
       value = topUpCount;
     }
+    // method 优先，其次用当前 payWay，最后按已启用的支付方式推断
+    const resolvedMethod =
+      method ||
+      payWay ||
+      (enableAlipayTopUp ? 'alipay' : enableWechatPayTopUp ? 'wxpay' : enableStripeTopUp ? 'stripe' : null);
+
     setAmountLoading(true);
     try {
-      const res = await API.post('/api/user/amount', {
-        amount: parseFloat(value),
-      });
+      let endpoint = '/api/user/amount';
+      let body = { amount: parseFloat(value) };
+      if (resolvedMethod === 'alipay') {
+        endpoint = '/api/user/alipay/amount';
+        body = { amount: parseInt(value) };
+      } else if (resolvedMethod === 'wxpay') {
+        endpoint = '/api/user/wechatpay/amount';
+        body = { amount: parseInt(value) };
+      } else if (resolvedMethod === 'stripe') {
+        endpoint = '/api/user/stripe/amount';
+        body = { amount: parseFloat(value) };
+      }
+
+      const res = await API.post(endpoint, body);
       if (res !== undefined) {
         const { message, data } = res.data;
         if (message === 'success') {
@@ -692,11 +774,9 @@ const TopUp = () => {
   const selectPresetAmount = (preset) => {
     setTopUpCount(preset.value);
     setSelectedPreset(preset.value);
-
-    // 计算实际支付金额，考虑折扣
-    const discount = preset.discount || topupInfo.discount[preset.value] || 1.0;
-    const discountedAmount = preset.value * priceRatio * discount;
-    setAmount(discountedAmount);
+    // 调 API 计算实付金额，直接传入当前支付方式
+    const method = payWay || (enableAlipayTopUp ? 'alipay' : enableWechatPayTopUp ? 'wxpay' : enableStripeTopUp ? 'stripe' : null);
+    getAmount(preset.value, method);
   };
 
   // 格式化大数字显示
@@ -751,6 +831,28 @@ const TopUp = () => {
         t={t}
       />
 
+      {/* 微信支付二维码模态框 */}
+      <Modal
+        title={t('微信扫码支付')}
+        visible={wechatQrVisible}
+        onCancel={() => setWechatQrVisible(false)}
+        footer={null}
+        centered
+        size='small'
+      >
+        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+          {wechatQrUrl && (
+            <QRCodeSVG value={wechatQrUrl} size={200} style={{ margin: '0 auto' }} />
+          )}
+          <Typography.Text type='tertiary' style={{ display: 'block', marginTop: 12, fontSize: 13 }}>
+            {t('请使用微信扫描二维码完成支付')}
+          </Typography.Text>
+          <Typography.Text type='tertiary' style={{ display: 'block', marginTop: 4, fontSize: 12 }}>
+            {t('支付完成后请刷新页面')}
+          </Typography.Text>
+        </div>
+      </Modal>
+
       {/* Creem 充值确认模态框 */}
       <Modal
         title={t('确定要充值 $')}
@@ -786,6 +888,8 @@ const TopUp = () => {
           enableOnlineTopUp={enableOnlineTopUp}
           enableStripeTopUp={enableStripeTopUp}
           enableCreemTopUp={enableCreemTopUp}
+          enableAlipayTopUp={enableAlipayTopUp}
+          enableWechatPayTopUp={enableWechatPayTopUp}
           creemProducts={creemProducts}
           creemPreTopUp={creemPreTopUp}
           enableWaffoTopUp={enableWaffoTopUp}
@@ -795,7 +899,7 @@ const TopUp = () => {
           selectedPreset={selectedPreset}
           selectPresetAmount={selectPresetAmount}
           formatLargeNumber={formatLargeNumber}
-          priceRatio={priceRatio}
+          priceRatio={effectiveUnitPrice}
           topUpCount={topUpCount}
           minTopUp={minTopUp}
           renderQuotaWithAmount={renderQuotaWithAmount}
