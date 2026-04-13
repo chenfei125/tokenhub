@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: tokenhub
+    runtime: docker
+    region: singapore
+    plan: free
+    branch: main
+    envVars:
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TZ
+        value: Asia/Shanghai
+      - key: SQL_DSN
+        fromDatabase:
+          name: tokenhub-db
+          property: connectionString
+      - key: TIKTOKEN_CACHE_DIR
+        value: /data/tiktoken_cache
+
+databases:
+  - name: tokenhub-db
+    databaseName: tokenhub
+    plan: free
+    region: singapore
