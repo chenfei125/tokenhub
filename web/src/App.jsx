@@ -55,6 +55,11 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const About = lazy(() => import('./pages/About'));
 const UserAgreement = lazy(() => import('./pages/UserAgreement'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const CheapAiApi = lazy(() => import('./pages/SEO/CheapAiApi'));
+const OpenAiAlternative = lazy(() => import('./pages/SEO/OpenAiAlternative'));
+const DeepSeekApi = lazy(() => import('./pages/SEO/DeepSeekApi'));
+const MiniMaxApi = lazy(() => import('./pages/SEO/MiniMaxApi'));
+const AiApiPricing = lazy(() => import('./pages/SEO/AiApiPricing'));
 
 function DynamicOAuth2Callback() {
   const { provider } = useParams();
@@ -375,6 +380,46 @@ function App() {
                 <Chat2Link />
               </Suspense>
             </PrivateRoute>
+          }
+        />
+        <Route
+          path='/cheap-ai-api'
+          element={
+            <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+              <CheapAiApi />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/openai-alternative'
+          element={
+            <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+              <OpenAiAlternative />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/deepseek-api'
+          element={
+            <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+              <DeepSeekApi />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/minimax-api'
+          element={
+            <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+              <MiniMaxApi />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/ai-api-pricing'
+          element={
+            <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+              <AiApiPricing />
+            </Suspense>
           }
         />
         <Route path='*' element={<NotFound />} />
