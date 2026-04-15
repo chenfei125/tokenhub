@@ -3,40 +3,49 @@ import { Button } from '@douyinfe/semi-ui';
 import { Link } from 'react-router-dom';
 import { IconArrowRight } from '@douyinfe/semi-icons';
 import { Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { getLang, SEO } from './seoI18n';
 
 const SEO_LINKS = [
-  { to: '/cheap-ai-api', label: 'Cheap AI API' },
+  { to: '/cheap-ai-api',       label: 'Cheap AI API' },
   { to: '/openai-alternative', label: 'OpenAI Alternative' },
-  { to: '/deepseek-api', label: 'DeepSeek API Access' },
-  { to: '/minimax-api', label: 'MiniMax API Access' },
+  { to: '/deepseek-api',       label: 'DeepSeek API Access' },
+  { to: '/minimax-api',        label: 'MiniMax API Access' },
 ];
 
-const PRICING_ROWS = [
-  { model: 'GPT-4o', provider: 'OpenAI', input: '$2.50', output: '$10.00', note: 'Official pricing' },
-  { model: 'GPT-4o mini', provider: 'OpenAI', input: '$0.15', output: '$0.60', note: 'Official pricing' },
-  { model: 'DeepSeek-V3', provider: 'TokenHub', input: '$0.07', output: '$0.28', note: 'Via TokenHub' },
-  { model: 'DeepSeek-R1', provider: 'TokenHub', input: '$0.14', output: '$0.55', note: 'Via TokenHub' },
-  { model: 'MiniMax-Text-01', provider: 'TokenHub', input: '$0.10', output: '$0.40', note: 'Via TokenHub' },
+const PRICING_DATA = [
+  { model: 'GPT-4o',          provider: 'OpenAI',    input: '$2.50',  output: '$10.00', highlight: false },
+  { model: 'GPT-4o mini',     provider: 'OpenAI',    input: '$0.15',  output: '$0.60',  highlight: false },
+  { model: 'DeepSeek-V3',     provider: 'TokenHub',  input: '$0.07',  output: '$0.28',  highlight: true  },
+  { model: 'DeepSeek-R1',     provider: 'TokenHub',  input: '$0.14',  output: '$0.55',  highlight: true  },
+  { model: 'MiniMax-Text-01', provider: 'TokenHub',  input: '$0.10',  output: '$0.40',  highlight: true  },
 ];
 
 export default function AiApiPricing() {
+  const { i18n } = useTranslation();
+  const lang = getLang(i18n.language);
+  const c = SEO.aiApiPricing[lang] || SEO.aiApiPricing['en'];
+
   useEffect(() => {
-    document.title = 'AI API Pricing Comparison | Save Cost on LLM APIs | TokenHub';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Compare AI API pricing across providers. See how much you can save using DeepSeek and MiniMax via TokenHub vs OpenAI.');
-  }, []);
+    document.title = c.title;
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute('content', c.description);
+    let metaKw = document.querySelector('meta[name="keywords"]');
+    if (!metaKw) {
+      metaKw = document.createElement('meta');
+      metaKw.setAttribute('name', 'keywords');
+      document.head.appendChild(metaKw);
+    }
+    metaKw.setAttribute('content', c.keywords);
+  }, [c]);
 
   return (
     <div className='max-w-3xl mx-auto px-4 py-16 space-y-12'>
 
       <section>
         <p className='text-sm text-semi-color-text-2 mb-2'>TokenHub · AI API Pricing</p>
-        <h1 className='text-4xl font-bold text-semi-color-text-0 mb-4'>
-          AI API Pricing Comparison
-        </h1>
-        <p className='text-lg text-semi-color-text-1'>
-          Compare costs across major AI API providers. Understand the pricing structure of LLMs and see how much you can save by choosing the right model and platform.
-        </p>
+        <h1 className='text-4xl font-bold text-semi-color-text-0 mb-4'>{c.h1}</h1>
+        <p className='text-lg text-semi-color-text-1'>{c.intro}</p>
         <div className='mt-6 flex flex-wrap gap-3'>
           <Link to='/console'>
             <Button theme='solid' type='primary' size='large' className='!rounded-3xl !px-8' icon={<IconArrowRight />} iconPosition='right'>
@@ -44,68 +53,60 @@ export default function AiApiPricing() {
             </Button>
           </Link>
           <Link to='/cheap-ai-api'>
-            <Button size='large' className='!rounded-3xl !px-8'>Learn About Cheap AI APIs</Button>
+            <Button size='large' className='!rounded-3xl !px-8'>Cheap AI API</Button>
           </Link>
         </div>
       </section>
 
-      {/* H2: How AI API pricing works */}
+      {/* Pricing table */}
       <section>
-        <h2 className='text-2xl font-bold text-semi-color-text-0 mb-4'>How AI API Pricing Works</h2>
-        <p className='text-semi-color-text-1 leading-relaxed mb-3'>
-          Most AI APIs are priced per token, where a token is roughly 4 characters of text. Pricing is split between input tokens (your prompt) and output tokens (the model's response). Output tokens are typically more expensive because they require more computation.
-        </p>
-        <p className='text-semi-color-text-1 leading-relaxed'>
-          When evaluating API costs, consider your usage pattern: read-heavy applications (document summarization, classification) spend most tokens on input, while generative applications (content creation, coding) tend to consume more output tokens.
-        </p>
-      </section>
-
-      {/* H2: Pricing comparison table */}
-      <section>
-        <h2 className='text-2xl font-bold text-semi-color-text-0 mb-4'>LLM API Pricing Comparison</h2>
-        <p className='text-semi-color-text-1 leading-relaxed mb-4'>
-          Prices are shown per 1 million tokens (input / output). TokenHub prices reflect access through the aggregated platform:
-        </p>
-        <div className='overflow-x-auto'>
+        <h2 className='text-2xl font-bold text-semi-color-text-0 mb-2'>{c.pricingTitle}</h2>
+        <p className='text-semi-color-text-2 mb-4 text-sm'>{c.pricingSubtitle}</p>
+        <div className='overflow-x-auto rounded-xl border border-semi-color-border bg-semi-color-bg-0'>
           <table className='w-full text-sm border-collapse'>
             <thead>
-              <tr className='border-b border-semi-color-border'>
-                <th className='text-left py-3 pr-4 text-semi-color-text-2 font-medium'>Model</th>
-                <th className='text-left py-3 pr-4 text-semi-color-text-2 font-medium'>Provider</th>
-                <th className='text-left py-3 pr-4 text-semi-color-text-2 font-medium'>Input /M tokens</th>
-                <th className='text-left py-3 pr-4 text-semi-color-text-2 font-medium'>Output /M tokens</th>
-                <th className='text-left py-3 text-semi-color-text-2 font-medium'>Note</th>
+              <tr className='border-b border-semi-color-border bg-semi-color-fill-1'>
+                <th className='text-left px-4 py-3 text-semi-color-text-2 font-medium'>Model</th>
+                <th className='text-left px-4 py-3 text-semi-color-text-2 font-medium'>Provider</th>
+                <th className='text-right px-4 py-3 text-semi-color-text-2 font-medium'>Input</th>
+                <th className='text-right px-4 py-3 text-semi-color-text-2 font-medium'>Output</th>
               </tr>
             </thead>
             <tbody>
-              {PRICING_ROWS.map((row, i) => (
-                <tr key={i} className='border-b border-semi-color-border last:border-0'>
-                  <td className='py-3 pr-4 font-medium text-semi-color-text-0'>{row.model}</td>
-                  <td className={`py-3 pr-4 ${row.provider === 'TokenHub' ? 'text-semi-color-primary font-medium' : 'text-semi-color-text-2'}`}>{row.provider}</td>
-                  <td className='py-3 pr-4 text-semi-color-text-1'>{row.input}</td>
-                  <td className='py-3 pr-4 text-semi-color-text-1'>{row.output}</td>
-                  <td className='py-3 text-semi-color-text-2 text-xs'>{row.note}</td>
+              {PRICING_DATA.map((row, i) => (
+                <tr key={i} className={`border-b border-semi-color-border last:border-0 ${row.highlight ? 'bg-semi-color-primary-light-default' : ''}`}>
+                  <td className='px-4 py-3 font-medium text-semi-color-text-0'>{row.model}</td>
+                  <td className='px-4 py-3'>
+                    {row.highlight ? (
+                      <span className='inline-flex items-center gap-1.5 font-medium text-semi-color-text-0'>
+                        {row.provider}
+                        <span className='text-xs px-1.5 py-0.5 rounded border border-green-500 text-green-600 dark:text-green-400'>{c.priceBadge}</span>
+                      </span>
+                    ) : (
+                      <span className='text-semi-color-text-2'>{row.provider}</span>
+                    )}
+                  </td>
+                  <td className={`px-4 py-3 text-right font-mono font-semibold ${row.highlight ? 'text-green-600 dark:text-green-400' : 'text-semi-color-text-2'}`}>{row.input}</td>
+                  <td className={`px-4 py-3 text-right font-mono font-semibold ${row.highlight ? 'text-green-600 dark:text-green-400' : 'text-semi-color-text-2'}`}>{row.output}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className='text-xs text-semi-color-text-2 mt-3'>Prices are approximate and may change. Check the console for current rates.</p>
+        <p className='text-xs text-semi-color-text-2 mt-3'>{c.note}</p>
       </section>
 
-      {/* H2: Cost structure */}
+      {/* How pricing works */}
       <section>
-        <h2 className='text-2xl font-bold text-semi-color-text-0 mb-4'>Understanding AI API Cost Structure</h2>
-        <p className='text-semi-color-text-1 leading-relaxed mb-4'>
-          API costs for AI products are determined by several factors beyond the per-token rate:
-        </p>
+        <h2 className='text-2xl font-bold text-semi-color-text-0 mb-4'>{c.howTitle}</h2>
+        <p className='text-semi-color-text-1 leading-relaxed'>{c.how}</p>
+      </section>
+
+      {/* Cost factors */}
+      <section>
+        <h2 className='text-2xl font-bold text-semi-color-text-0 mb-4'>{c.costTitle}</h2>
         <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-          {[
-            { title: 'Token consumption', desc: 'Total input + output tokens across all requests. Use prompt compression and context management to reduce waste.' },
-            { title: 'Model selection', desc: 'Larger models cost more. Use the smallest model that satisfies your quality requirement for each task.' },
-            { title: 'Request volume', desc: 'High-volume applications benefit most from per-token pricing over flat subscriptions.' },
-            { title: 'Context window usage', desc: 'Sending long conversation histories on every request multiplies costs quickly. Implement context trimming strategies.' },
-          ].map((item, i) => (
+          {c.costItems.map((item, i) => (
             <div key={i} className='p-4 rounded-lg border border-semi-color-border bg-semi-color-bg-1'>
               <p className='font-medium text-semi-color-text-0 text-sm mb-1'>{item.title}</p>
               <p className='text-xs text-semi-color-text-2'>{item.desc}</p>
@@ -114,19 +115,11 @@ export default function AiApiPricing() {
         </div>
       </section>
 
-      {/* H2: Why TokenHub cheaper */}
+      {/* Why TokenHub cheaper */}
       <section>
-        <h2 className='text-2xl font-bold text-semi-color-text-0 mb-4'>Why Is TokenHub Cheaper Than Direct API Access?</h2>
-        <p className='text-semi-color-text-1 leading-relaxed mb-4'>
-          TokenHub aggregates demand across many developers and negotiates access at better rates than individual developer plans. Several structural advantages contribute to lower costs:
-        </p>
+        <h2 className='text-2xl font-bold text-semi-color-text-0 mb-4'>{c.whyTitle}</h2>
         <ul className='space-y-3'>
-          {[
-            { title: 'Aggregated access', desc: 'Volume across the platform enables better pricing that individual accounts cannot access.' },
-            { title: 'Efficient model routing', desc: 'Requests are routed to the most cost-effective available channel, reducing overhead.' },
-            { title: 'No premium markup', desc: 'TokenHub passes savings to developers rather than charging enterprise margins on top.' },
-            { title: 'Cost-efficient model catalog', desc: 'Models like DeepSeek deliver strong results at a fraction of the price of GPT-4 class models.' },
-          ].map((item, i) => (
+          {c.whyItems.map((item, i) => (
             <li key={i} className='flex gap-3 p-4 rounded-lg border border-semi-color-border bg-semi-color-bg-1'>
               <Check size={16} className='text-green-500 mt-0.5 flex-shrink-0' />
               <div>
@@ -140,11 +133,11 @@ export default function AiApiPricing() {
 
       {/* Final CTA */}
       <section className='rounded-xl border border-semi-color-border bg-semi-color-fill-0 p-8 text-center'>
-        <h2 className='text-xl font-bold text-semi-color-text-0 mb-2'>Pay Less for the Same AI Quality</h2>
-        <p className='text-semi-color-text-2 mb-6'>Access DeepSeek, MiniMax and more at lower cost. No commitment required.</p>
+        <h2 className='text-xl font-bold text-semi-color-text-0 mb-2'>{c.ctaTitle}</h2>
+        <p className='text-semi-color-text-2 mb-6'>{c.ctaSubtitle}</p>
         <Link to='/console'>
           <Button theme='solid' type='primary' size='large' className='!rounded-3xl !px-10' icon={<IconArrowRight />} iconPosition='right'>
-            Get API Key
+            {c.ctaButton}
           </Button>
         </Link>
       </section>
